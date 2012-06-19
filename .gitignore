@@ -1,0 +1,6 @@
+# Ignore file create by Microsoft Visual Studio .NET 2010
+[Oo]bj
+[Bb]in
+*.suo
+*.pdb
+*.log
