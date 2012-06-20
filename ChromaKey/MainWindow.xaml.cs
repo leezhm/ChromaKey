@@ -20,6 +20,8 @@ using Code4Fun.cn.Kinect.Smoothen;
 using System.ComponentModel;    // For BackgroundWorker
 using System.Threading;         // For DispatcherPriority
 
+using AForge;
+
 namespace ChromaKey
 {
     /// <summary>
@@ -201,6 +203,10 @@ namespace ChromaKey
                 {
                     diFrame.CopyPixelDataTo(this.DepthDatas);
                 }
+                else
+                {
+                    return;
+                }
             }
 
             // Clear
@@ -220,7 +226,7 @@ namespace ChromaKey
                 for (int wIndex = 0; wIndex < DepthSize.Width; ++wIndex)
                 {
                     int index = wIndex + hIndex * (int)DepthSize.Width;
-                    short player = (short)(DepthDatas[index] & DepthImageFrame.PlayerIndexBitmask);
+                    int player = DepthDatas[index] & DepthImageFrame.PlayerIndexBitmask;
 
                     if (0 < player) // Just for Player
                     {
@@ -241,7 +247,7 @@ namespace ChromaKey
                             PlayerPixels[playerIndex + 1] = ColorPixels[colorIndex + 1];
                             PlayerPixels[playerIndex + 2] = ColorPixels[colorIndex + 2];
                             PlayerPixels[playerIndex + 3] = ColorPixels[colorIndex + 3];
-
+                            
                             --playerIndex;
                             --colorIndex;
 
@@ -264,9 +270,7 @@ namespace ChromaKey
             if (null == smooth && HadPlayer)
             {
                 Color bg = new Color();
-                bg.B = 0;
-                bg.G = 0;
-                bg.R = 0;
+                bg.B = bg.G = bg.R = 0;
 
                 // Gaussian
                 smooth = new GaussianFilter((int)DepthSize.Width, (int)DepthSize.Height, PixelFormats.Bgr32, bg);
@@ -275,7 +279,9 @@ namespace ChromaKey
                 //smooth = new BilateralFilter((int)DepthSize.Width, (int)DepthSize.Height, PixelFormats.Bgr32);
 
                 // Median
-                smooth2 = new GenericMedian((int)DepthSize.Width, (int)DepthSize.Height, PixelFormats.Bgr32, bg, 7);
+                smooth2 = new GenericMedian((int)DepthSize.Width, (int)DepthSize.Height, PixelFormats.Bgr32, bg, 5);
+
+                median = new AForge.Imaging.Filters.Median(5);
 
                 if (null == globalBWorker)
                 {
@@ -287,6 +293,8 @@ namespace ChromaKey
             }
         }
 
+        private AForge.Imaging.Filters.Median median = null;
+
         private void DoWorking(object sender, DoWorkEventArgs args)
         {
             while (true)
@@ -295,6 +303,8 @@ namespace ChromaKey
                 smooth.ProcessFilter(PlayerPixels);
                 //smooth2.ProcessFilter(PlayerPixels);
 
+                //median.Apply(
+
                 this.Dispatcher.BeginInvoke((Action)delegate
                 {
                     PlayerBitmap.WritePixels(new Int32Rect(0, 0, (int)DepthSize.Width, (int)DepthSize.Height),
@@ -302,7 +312,7 @@ namespace ChromaKey
                 });
                 sw.Stop();
 
-                Console.WriteLine("Time -> " + sw.ElapsedMilliseconds);
+                //Console.WriteLine("Time -> " + sw.ElapsedMilliseconds);
 
                 System.Threading.Thread.Sleep(1);
             }

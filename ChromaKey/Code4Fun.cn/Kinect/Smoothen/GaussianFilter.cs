@@ -62,7 +62,7 @@ namespace Code4Fun.cn.Kinect.Smoothen
             BackgroundColor = bgColor;
 
             // Init Gaussian Kernel
-            Gauss = new Kinect.Math.Gaussian(7, 1.00);
+            Gauss = new Kinect.Math.Gaussian(5, 1.02);
 
             Begin = -((Gauss.Size - 1) / 2);
             End = (Gauss.Size + 1) / 2;
@@ -81,21 +81,28 @@ namespace Code4Fun.cn.Kinect.Smoothen
             int pixelG = 0;
             int pixelR = 0;
 
+            int xBound = 0;
+            int yBound = 0;
+
+            int index = 0;
+
             //Parallel.For(0, Height, hIndex =>
                 for (int hIndex = 0; hIndex < Height; ++hIndex)
                 {
                     for (int wIndex = 0; wIndex < Width; ++wIndex)
                     {
-                        int index = (wIndex + hIndex * Width) * Format.BitsPerPixel / 8 ;
+                        index = (wIndex + hIndex * Width) * Format.BitsPerPixel / 8 ;
 
-                        if (BackgroundColor.B != pixels[index])
+                        if (!(BackgroundColor.B == pixels[index] &&
+                            BackgroundColor.G == pixels[index + 1] &&
+                            BackgroundColor.R == pixels[index + 2]))
                         {
                             for (int yi = Begin; yi < End; ++yi)
                             {
                                 for (int xi = Begin; xi < End; ++xi)
                                 {
-                                    int xBound = wIndex + xi;
-                                    int yBound = hIndex + yi;
+                                    xBound = wIndex + xi;
+                                    yBound = hIndex + yi;
 
                                     if (0 <= xBound && WBound >= xBound &&
                                         0 <= yBound && HBound >= yBound)
