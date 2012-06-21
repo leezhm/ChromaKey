@@ -15,7 +15,7 @@ namespace Code4Fun.cn.Kinect.Smoothen
         public BilateralFilter(int w, int h, PixelFormat format)
             : base(w, h, format)
         {
-            Bi = new Math.Bilateral(5, 256, 10, 50);
+            Bi = new Math.Bilateral(3, 256, 10, 50);
         }
 
         public override void ProcessFilter(byte[] pixels)
@@ -42,7 +42,7 @@ namespace Code4Fun.cn.Kinect.Smoothen
                 for (int wIndex = Bi.OffSet; wIndex < (Width - Bi.OffSet); ++wIndex)
                 {
                     int index = (wIndex + hIndex * Width) * offSet;
-
+                    
                     sCorefB = sCorefG = sCorefR = 0;
                     sMembB  = sMembG  = sMembR  = 0;
                     corefB  = corefG  = corefR  = 0;

@@ -16,6 +16,7 @@ using Microsoft.Kinect;
 
 using Code4Fun.cn.Kinect.Math;
 using Code4Fun.cn.Kinect.Smoothen;
+using Code4Fun.cn.Kinect.Flickering;
 
 using System.ComponentModel;    // For BackgroundWorker
 using System.Threading;         // For DispatcherPriority
@@ -39,8 +40,10 @@ namespace ChromaKey
         /// </summary>
         private KinectSensor gSensor = null;
 
-        private Size ColorSize;
-        private Size DepthSize;
+        private int ColorWidth;
+        private int ColorHeight;
+        private int DepthWidth;
+        private int DepthHeight;
 
         private ColorImageFormat CIF = ColorImageFormat.RgbResolution640x480Fps30;
         private DepthImageFormat DIF = DepthImageFormat.Resolution640x480Fps30;
@@ -62,6 +65,9 @@ namespace ChromaKey
         private BackgroundWorker globalBWorker = null;
 
         private bool HadPlayer = false;
+
+        private Queue<byte[]> PixelsQueue = new Queue<byte[]>();
+        private AverageFilter Average = new AverageFilter();
 
         /// <summary>
         /// 
@@ -116,9 +122,11 @@ namespace ChromaKey
                 gSensor.DepthStream.Enable(DIF);
 
                 // Get the size of Color/Depth Image
-                ColorSize = new Size(gSensor.ColorStream.FrameWidth, gSensor.ColorStream.FrameHeight);
-                DepthSize = new Size(gSensor.DepthStream.FrameWidth, gSensor.DepthStream.FrameHeight);
-                Divisor = ColorSize.Width / DepthSize.Width;
+                ColorWidth = gSensor.ColorStream.FrameWidth;
+                ColorHeight = gSensor.ColorStream.FrameHeight;
+                DepthWidth = gSensor.DepthStream.FrameWidth;
+                DepthHeight = gSensor.DepthStream.FrameHeight;
+                Divisor = ColorWidth / DepthWidth;
 
                 //var parameters = new TransformSmoothParameters
                 //{
@@ -144,7 +152,7 @@ namespace ChromaKey
 
                 if (null == ColorBitmap)
                 {
-                    ColorBitmap = new WriteableBitmap((int)ColorSize.Width, (int)ColorSize.Height, 96.0, 96.0, PixelFormats.Bgr32, null);
+                    ColorBitmap = new WriteableBitmap(ColorWidth, ColorHeight, 96.0, 96.0, PixelFormats.Bgr32, null);
                 }
 
                 if (null == PlayerPixels)
@@ -154,7 +162,7 @@ namespace ChromaKey
 
                 if (null == PlayerBitmap)
                 {
-                    PlayerBitmap = new WriteableBitmap((int)DepthSize.Width, (int)DepthSize.Height, 96.0, 96.0, PixelFormats.Bgr32, null);
+                    PlayerBitmap = new WriteableBitmap(DepthWidth, DepthHeight, 96.0, 96.0, PixelFormats.Bgr32, null);
                 }
 
                 if (null == DepthDatas)
@@ -192,8 +200,8 @@ namespace ChromaKey
                 {
                     ciFrame.CopyPixelDataTo(this.ColorPixels);
 
-                    ColorBitmap.WritePixels(new Int32Rect(0, 0, (int)ColorSize.Width, (int)ColorSize.Height),
-                                            ColorPixels, (int)ColorSize.Width * sizeof(int), 0); 
+                    ColorBitmap.WritePixels(new Int32Rect(0, 0, ColorWidth, ColorHeight),
+                                            ColorPixels, ColorWidth * sizeof(int), 0); 
                 }
             }
 
@@ -220,15 +228,17 @@ namespace ChromaKey
 
             gSensor.MapDepthFrameToColorFrame(DIF, DepthDatas, CIF, CIP);
 
-            // Fill the Player Image
-            for (int hIndex = 0; hIndex < DepthSize.Height; ++hIndex)
-            {
-                for (int wIndex = 0; wIndex < DepthSize.Width; ++wIndex)
-                {
-                    int index = wIndex + hIndex * (int)DepthSize.Width;
-                    int player = DepthDatas[index] & DepthImageFrame.PlayerIndexBitmask;
+            byte[] pixels = new byte[gSensor.DepthStream.FramePixelDataLength * sizeof(int)];
 
-                    if (0 < player) // Just for Player
+            // Fill the Player Image
+            for (int hIndex = 0; hIndex < DepthHeight; ++hIndex)
+            {
+                for (int wIndex = 0; wIndex < DepthWidth; ++wIndex)
+                {
+                    int index = wIndex + hIndex * DepthWidth;
+                    //int player = DepthDatas[index] & DepthImageFrame.PlayerIndexBitmask;
+
+                    if (0 < (DepthDatas[index] & DepthImageFrame.PlayerIndexBitmask)) // Just for Player
                     {
                         ColorImagePoint cip = CIP[index];
 
@@ -236,25 +246,25 @@ namespace ChromaKey
                         int colorInDepthX = (int)(cip.X / this.Divisor);
                         int colorInDepthY = (int)(cip.Y / this.Divisor);
 
-                        if (colorInDepthX > 0 && colorInDepthX < this.DepthSize.Width &&
-                            colorInDepthY >= 0 && colorInDepthY < this.DepthSize.Height)
+                        if (colorInDepthX > 0 && colorInDepthX < this.DepthWidth &&
+                            colorInDepthY >= 0 && colorInDepthY < this.DepthHeight)
                         {
                             // calculate index into the green screen pixel array
-                            int playerIndex = (colorInDepthX + (colorInDepthY * (int)this.DepthSize.Width)) * sizeof(int);
-                            int colorIndex = (cip.X + cip.Y * (int)ColorSize.Width) * sizeof(int);
+                            int playerIndex = (colorInDepthX + (colorInDepthY * this.DepthWidth)) << 2;
+                            int colorIndex = (cip.X + cip.Y * ColorWidth) << 2;
 
-                            PlayerPixels[playerIndex] = ColorPixels[colorIndex]; //BitConverter.ToInt32(ColorPixels, colorIndex);
-                            PlayerPixels[playerIndex + 1] = ColorPixels[colorIndex + 1];
-                            PlayerPixels[playerIndex + 2] = ColorPixels[colorIndex + 2];
-                            PlayerPixels[playerIndex + 3] = ColorPixels[colorIndex + 3];
+                            pixels[playerIndex] = ColorPixels[colorIndex]; //BitConverter.ToInt32(ColorPixels, colorIndex);
+                            pixels[playerIndex + 1] = ColorPixels[colorIndex + 1];
+                            pixels[playerIndex + 2] = ColorPixels[colorIndex + 2];
+                            pixels[playerIndex + 3] = ColorPixels[colorIndex + 3];
                             
                             --playerIndex;
                             --colorIndex;
 
-                            PlayerPixels[playerIndex] = ColorPixels[colorIndex]; //BitConverter.ToInt32(ColorPixels, colorIndex);
-                            PlayerPixels[playerIndex + 1] = ColorPixels[colorIndex + 1];
-                            PlayerPixels[playerIndex + 2] = ColorPixels[colorIndex + 2];
-                            PlayerPixels[playerIndex + 3] = ColorPixels[colorIndex + 3];
+                            pixels[playerIndex] = ColorPixels[colorIndex]; //BitConverter.ToInt32(ColorPixels, colorIndex);
+                            pixels[playerIndex + 1] = ColorPixels[colorIndex + 1];
+                            pixels[playerIndex + 2] = ColorPixels[colorIndex + 2];
+                            pixels[playerIndex + 3] = ColorPixels[colorIndex + 3];
                         }
 
                         HadPlayer = true;
@@ -266,6 +276,13 @@ namespace ChromaKey
                 }
             }
 
+            lock (gLock)
+            {
+                // Enqueue
+                Average.ResetQueue(PixelsQueue, 3);
+                PixelsQueue.Enqueue(pixels);
+            }
+
             // Smoothen
             if (null == smooth && HadPlayer)
             {
@@ -273,15 +290,15 @@ namespace ChromaKey
                 bg.B = bg.G = bg.R = 0;
 
                 // Gaussian
-                smooth = new GaussianFilter((int)DepthSize.Width, (int)DepthSize.Height, PixelFormats.Bgr32, bg);
+                //smooth = new GaussianFilter(DepthWidth, DepthHeight, PixelFormats.Bgr32, bg);
                 
                 // Bilateral
-                //smooth = new BilateralFilter((int)DepthSize.Width, (int)DepthSize.Height, PixelFormats.Bgr32);
+                smooth = new BilateralFilter(DepthWidth, DepthHeight, PixelFormats.Bgr32);
 
                 // Median
-                smooth2 = new GenericMedian((int)DepthSize.Width, (int)DepthSize.Height, PixelFormats.Bgr32, bg, 5);
+                smooth2 = new GenericMedian(DepthWidth, DepthHeight, PixelFormats.Bgr32, bg, 3);
 
-                median = new AForge.Imaging.Filters.Median(5);
+                //median = new AForge.Imaging.Filters.Median(5);
 
                 if (null == globalBWorker)
                 {
@@ -291,28 +308,39 @@ namespace ChromaKey
                     globalBWorker.RunWorkerAsync();
                 }
             }
+
+            ////PlayerBitmap.WritePixels(new Int32Rect(0, 0, DepthWidth, DepthHeight),
+            ////    PlayerPixels, DepthWidth * ((PlayerBitmap.Format.BitsPerPixel + 7) / 8), 0);
         }
 
         private AForge.Imaging.Filters.Median median = null;
+
+        private readonly object gLock = new object();
 
         private void DoWorking(object sender, DoWorkEventArgs args)
         {
             while (true)
             {
                 System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
-                smooth.ProcessFilter(PlayerPixels);
+
+                lock (gLock)
+                {
+                    Average.Apply(PixelsQueue, PlayerPixels, 3, DepthWidth, DepthHeight);
+                }
+
+                //smooth.ProcessFilter(PlayerPixels);
                 //smooth2.ProcessFilter(PlayerPixels);
 
                 //median.Apply(
 
                 this.Dispatcher.BeginInvoke((Action)delegate
                 {
-                    PlayerBitmap.WritePixels(new Int32Rect(0, 0, (int)DepthSize.Width, (int)DepthSize.Height),
-                                    PlayerPixels, (int)DepthSize.Width * ((PlayerBitmap.Format.BitsPerPixel + 7) / 8), 0);
+                    PlayerBitmap.WritePixels(new Int32Rect(0, 0, DepthWidth, DepthHeight),
+                                    PlayerPixels, DepthWidth * ((PlayerBitmap.Format.BitsPerPixel + 7) / 8), 0);
                 });
                 sw.Stop();
 
-                //Console.WriteLine("Time -> " + sw.ElapsedMilliseconds);
+                Console.WriteLine("Time -> " + sw.ElapsedMilliseconds);
 
                 System.Threading.Thread.Sleep(1);
             }

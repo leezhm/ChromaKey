@@ -55,7 +55,7 @@ namespace Code4Fun.cn.Kinect.Smoothen
                 for (int wIndex = 0; wIndex < Width; ++wIndex)
                 {
                     index = (wIndex + hIndex * Width) * offSet;
-                    if (BackgroundColor.B == pixels[index])
+                    //if (BackgroundColor.B == pixels[index])
                     {  
                         for (int yi = -radius; yi <= radius; ++yi)
                         {

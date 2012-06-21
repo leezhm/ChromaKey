@@ -113,6 +113,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Code4Fun.cn\Kinect\Flickering\AverageFilter.cs" />
     <Compile Include="Code4Fun.cn\Kinect\GlobalDef.cs" />
     <Compile Include="Code4Fun.cn\Kinect\Math\Bilateral.cs" />
     <Compile Include="Code4Fun.cn\Kinect\Math\Gaussian.cs" />
@@ -154,9 +155,7 @@
     </None>
     <AppDesigner Include="Properties\" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Code4Fun.cn\Kinect\Flickering\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
