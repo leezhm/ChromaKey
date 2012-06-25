@@ -70,7 +70,7 @@ namespace ChromaKey
 
         //private ConcurrentQueue<byte[]> PixelsQueue = new ConcurrentQueue<byte[]>();
         //private static Queue<byte[]> PixelsQueue = new Queue<byte[]>();
-        private LinkedList<byte[]> PixelsLinkedList = new LinkedList<byte[]>();
+        private static LinkedList<byte[]> PixelsLinkedList = new LinkedList<byte[]>();
         private AverageFilter Average = new AverageFilter();
 
         /// <summary>
@@ -298,10 +298,10 @@ namespace ChromaKey
                 bg.B = bg.G = bg.R = 0;
 
                 // Gaussian
-                smooth = new GaussianFilter(DepthWidth, DepthHeight, PixelFormats.Bgr32, bg);
+                //smooth = new GaussianFilter(DepthWidth, DepthHeight, PixelFormats.Bgr32, bg);
                 
                 // Bilateral
-                //smooth = new BilateralFilter(DepthWidth, DepthHeight, PixelFormats.Bgr32);
+                smooth = new BilateralFilter(DepthWidth, DepthHeight, PixelFormats.Bgr32);
 
                 // Median
                 smooth2 = new GenericMedian(DepthWidth, DepthHeight, PixelFormats.Bgr32, bg, 3);
@@ -329,7 +329,7 @@ namespace ChromaKey
         {
             while (true)
             {
-                System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+                //System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
 
                 //lock (gLock)
                 {
@@ -346,9 +346,9 @@ namespace ChromaKey
                     PlayerBitmap.WritePixels(new Int32Rect(0, 0, DepthWidth, DepthHeight),
                                     PlayerPixels, DepthWidth * ((PlayerBitmap.Format.BitsPerPixel + 7) / 8), 0);
                 });
-                sw.Stop();
+                //sw.Stop();
 
-                Console.WriteLine("Time -> " + sw.ElapsedMilliseconds);
+                //Console.WriteLine("Time -> " + sw.ElapsedMilliseconds);
 
                 System.Threading.Thread.Sleep(1);
             }
