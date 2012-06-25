@@ -341,8 +341,8 @@ namespace ChromaKey
                 sw.Stop();
 
                 Console.WriteLine("Time -> " + sw.ElapsedMilliseconds);
-
-                System.Threading.Thread.Sleep(1);
+                     
+                System. Threading.Thread.Sleep(1);
             }
         }
     }
