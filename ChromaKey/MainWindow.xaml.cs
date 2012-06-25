@@ -23,6 +23,8 @@ using System.Threading;         // For DispatcherPriority
 
 using AForge;
 
+using System.Collections.Concurrent; // for ConcurrentQueue
+
 namespace ChromaKey
 {
     /// <summary>
@@ -66,7 +68,7 @@ namespace ChromaKey
 
         private bool HadPlayer = false;
 
-        private Queue<byte[]> PixelsQueue = new Queue<byte[]>();
+        private ConcurrentQueue<byte[]> PixelsQueue = new ConcurrentQueue<byte[]>();
         private AverageFilter Average = new AverageFilter();
 
         /// <summary>
@@ -276,11 +278,11 @@ namespace ChromaKey
                 }
             }
 
-            lock (gLock)
+            //lock (gLock)
             {
                 // Enqueue
-                Average.ResetQueue(PixelsQueue, 3);
                 PixelsQueue.Enqueue(pixels);
+                Average.ResetQueue(PixelsQueue, 3);
             }
 
             // Smoothen
@@ -313,7 +315,7 @@ namespace ChromaKey
             ////    PlayerPixels, DepthWidth * ((PlayerBitmap.Format.BitsPerPixel + 7) / 8), 0);
         }
 
-        private AForge.Imaging.Filters.Median median = null;
+        //private AForge.Imaging.Filters.Median median = null;
 
         private readonly object gLock = new object();
 
@@ -323,7 +325,7 @@ namespace ChromaKey
             {
                 System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
 
-                lock (gLock)
+                //lock (gLock)
                 {
                     Average.Apply(PixelsQueue, PlayerPixels, 3, DepthWidth, DepthHeight);
                 }

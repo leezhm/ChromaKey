@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using System.Collections.Concurrent; // for ConcurrentQueue
+
 namespace Code4Fun.cn.Kinect.Flickering
 {
     class AverageFilter
@@ -10,24 +12,25 @@ namespace Code4Fun.cn.Kinect.Flickering
         /// <summary>
         /// Reset Queue when there are more than AverageFrameCount;
         /// </summary>
-        public void ResetQueue(Queue<byte[]> queue, int AverageFrameCount)
+        public void ResetQueue(ConcurrentQueue<byte[]> queue, int AverageFrameCount)
         {
             if (AverageFrameCount < queue.Count)
             {
                 // Clear
-                queue.Dequeue();
+                byte[] tmp;
+                queue.TryDequeue(out tmp);
 
                 ResetQueue(queue, AverageFrameCount);
             }
         }
 
-        public void Apply(Queue<byte[]> queue, byte[] newPixels, int Afc, int Width, int Height)
+        public void Apply(ConcurrentQueue<byte[]> queue, byte[] newPixels, int Afc, int Width, int Height)
         {
             int count = 1;
             Int32[,] sumPixels = new Int32[3, Width * Height];
             double denominator = 0.0f;
 
-            //ResetQueue(queue, Afc);
+            ResetQueue(queue, Afc);
 
             foreach (var item in queue)
             {
