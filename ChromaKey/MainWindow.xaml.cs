@@ -68,7 +68,9 @@ namespace ChromaKey
 
         private bool HadPlayer = false;
 
-        private ConcurrentQueue<byte[]> PixelsQueue = new ConcurrentQueue<byte[]>();
+        //private ConcurrentQueue<byte[]> PixelsQueue = new ConcurrentQueue<byte[]>();
+        //private static Queue<byte[]> PixelsQueue = new Queue<byte[]>();
+        private LinkedList<byte[]> PixelsLinkedList = new LinkedList<byte[]>();
         private AverageFilter Average = new AverageFilter();
 
         /// <summary>
@@ -220,7 +222,7 @@ namespace ChromaKey
             }
 
             // Clear
-            Array.Clear(PlayerPixels, 0, PlayerPixels.Length);
+            //Array.Clear(PlayerPixels, 0, PlayerPixels.Length);
             //System.Threading.Tasks.Parallel.For(0, PlayerPixels.Length, index =>
             //    {
             //        PlayerPixels[index] = 200;
@@ -278,11 +280,15 @@ namespace ChromaKey
                 }
             }
 
-            //lock (gLock)
+            lock (gLock)
             {
                 // Enqueue
-                PixelsQueue.Enqueue(pixels);
-                Average.ResetQueue(PixelsQueue, 3);
+                //PixelsQueue.Enqueue(pixels);
+                //Average.ResetQueue(PixelsQueue, 3);
+
+                PixelsLinkedList.AddLast(pixels);
+                Average.ResetLinkedList(PixelsLinkedList, 3);
+                
             }
 
             // Smoothen
@@ -292,10 +298,10 @@ namespace ChromaKey
                 bg.B = bg.G = bg.R = 0;
 
                 // Gaussian
-                //smooth = new GaussianFilter(DepthWidth, DepthHeight, PixelFormats.Bgr32, bg);
+                smooth = new GaussianFilter(DepthWidth, DepthHeight, PixelFormats.Bgr32, bg);
                 
                 // Bilateral
-                smooth = new BilateralFilter(DepthWidth, DepthHeight, PixelFormats.Bgr32);
+                //smooth = new BilateralFilter(DepthWidth, DepthHeight, PixelFormats.Bgr32);
 
                 // Median
                 smooth2 = new GenericMedian(DepthWidth, DepthHeight, PixelFormats.Bgr32, bg, 3);
@@ -327,11 +333,11 @@ namespace ChromaKey
 
                 //lock (gLock)
                 {
-                    Average.Apply(PixelsQueue, PlayerPixels, 3, DepthWidth, DepthHeight);
+                    Average.Apply(PixelsLinkedList, PlayerPixels, 3, DepthWidth, DepthHeight, gLock);
                 }
 
-                //smooth.ProcessFilter(PlayerPixels);
-                //smooth2.ProcessFilter(PlayerPixels);
+                smooth.ProcessFilter(PlayerPixels);
+                smooth2.ProcessFilter(PlayerPixels);
 
                 //median.Apply(
 
