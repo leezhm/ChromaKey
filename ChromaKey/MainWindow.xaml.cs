@@ -306,7 +306,7 @@ namespace ChromaKey
                 // Median
                 smooth2 = new GenericMedian(DepthWidth, DepthHeight, PixelFormats.Bgr32, bg, 3);
 
-                //median = new AForge.Imaging.Filters.Median(5);
+                median = new AForge.Imaging.Filters.Median(5);
 
                 if (null == globalBWorker)
                 {
@@ -321,7 +321,7 @@ namespace ChromaKey
             ////    PlayerPixels, DepthWidth * ((PlayerBitmap.Format.BitsPerPixel + 7) / 8), 0);
         }
 
-        //private AForge.Imaging.Filters.Median median = null;
+        private AForge.Imaging.Filters.Median median = null;
 
         private readonly object gLock = new object();
 
@@ -335,6 +335,15 @@ namespace ChromaKey
                 {
                     Average.Apply(PixelsLinkedList, PlayerPixels, 3, DepthWidth, DepthHeight, gLock);
                 }
+
+
+
+                //System.IO.MemoryStream ms = new System.IO.MemoryStream(PlayerPixels);
+                //System.Drawing.Bitmap btm = (System.Drawing.Bitmap)System.Drawing.Image.FromStream(ms);
+                //System.Drawing.Image img = median.Apply(btm);
+                //img.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
+                //PlayerPixels = ms.ToArray();
+                
 
                 smooth.ProcessFilter(PlayerPixels);
                 smooth2.ProcessFilter(PlayerPixels);
